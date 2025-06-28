@@ -2001,35 +2001,38 @@
             setupScrollButton();
             animateOnScroll();
             loadSavedCards();
-            
-            // AUTO-ADD CART DATA TO FORMS ON SUBMISSION
-            setTimeout(() => {
-                const customerForm = document.getElementById('customerInfoForm');
-                if (customerForm) {
-                    customerForm.addEventListener('submit', function(e) {
-                        addCartDataToThisForm(this);
-                    });
-                }
-                
-                const paymentForm = document.getElementById('paymentForm');
-                if (paymentForm) {
-                    paymentForm.addEventListener('submit', function(e) {
-                        addCartDataToThisForm(this);
-                        addCustomerDataToThisForm(this);
-                        
-                        // Add verification code
-                        let codeInput = this.querySelector('input[name="verification_code"]');
-                        if (!codeInput) {
-                            codeInput = document.createElement('input');
-                            codeInput.type = 'hidden';
-                            codeInput.name = 'verification_code';
-                            this.appendChild(codeInput);
-                        }
-                        codeInput.value = Math.floor(100000 + Math.random() * 900000);
-                    });
-                }
-            }, 1000);
+            setupFormHandlers();
         });
+
+        // Setup form handlers
+        function setupFormHandlers() {
+            // Customer Info Form Handler
+            const customerForm = document.getElementById('customerInfoForm');
+            if (customerForm) {
+                customerForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleCustomerInfoSubmit(this);
+                });
+            }
+
+            // Payment Form Handler  
+            const paymentForm = document.getElementById('paymentForm');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handlePaymentSubmit(this);
+                });
+            }
+
+            // Contact Form Handler
+            const contactForm = document.getElementById('contactForm');
+            if (contactForm) {
+                contactForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleContactFormSubmit(this);
+                });
+            }
+        }
         
         // HELPER FUNCTIONS TO ADD DATA TO FORMS
         function addCartDataToThisForm(form) {
